@@ -602,10 +602,10 @@ async def get_verify_status(userid):
         temp.VERIFY[userid] = status
     return status
     
-async def update_verify_status(userid, date, time):
+async def update_verify_status(userid, date_temp, time_temp):
     status = await get_verify_status(userid)
-    status["date"] = date
-    status["time"] = time
+    status["date"] = date_temp
+    status["time"] = time_temp
     temp.VERIFY[userid] = status
     await db.update_verification(userid, status)
 
@@ -617,8 +617,8 @@ async def verify_user(bot, userid, token):
     TOKENS[user.id] = {token: True}
     tz = pytz.timezone('Asia/Kolkata')
     date_var = date.today()
-    time = datetime.now()+timedelta(hours=12)
-    await update_verify_status(user.id, date_var, time)
+    time_var = datetime.now()+timedelta(hours=12)
+    await update_verify_status(user.id, date_var, time_var)
 
 async def check_verification(bot, userid):
     user = await bot.get_users(int(userid))
