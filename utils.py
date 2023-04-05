@@ -11,7 +11,7 @@ import pytz
 import random 
 import re
 import os
-from datetime import datetime, date
+from datetime import datetime, timedelta
 import string
 from typing import List
 from database.users_chats_db import db
@@ -26,7 +26,7 @@ BTN_URL_REGEX = re.compile(
     r"(\[([^\[]+?)\]\((buttonurl|buttonalert):(?:/{0,2})(.+?)(:same)?\))"
 )
 
-imdb = Cinemagoer() 
+imdb = Cinemagoer()
 TOKENS = {}
 VERIFIED = {}
 BANNED = {}
@@ -45,6 +45,7 @@ class temp(object):
     U_NAME = None
     B_NAME = None
     SETTINGS = {}
+    VERIFY = {}
 
 async def is_subscribed(bot, query):
     try:
@@ -551,44 +552,16 @@ async def check_token(bot, userid, token):
     else:
         return False
 
-async def get_token(bot, userid, link):
+async def get_token(bot, userid, link, fileid):
     user = await bot.get_users(userid)
     if not await db.is_user_exist(user.id):
         await db.add_user(user.id, user.first_name)
         await bot.send_message(LOG_CHANNEL, script.LOG_TEXT_P.format(user.id, user.mention))
     token = ''.join(random.choices(string.ascii_letters + string.digits, k=7))
     TOKENS[user.id] = {token: False}
-    link = f"{link}verify-{user.id}-{token}"
+    link = f"{link}verify-{user.id}-{token}-{fileid}"
     shortened_verify_url = await get_verify_shorted_link(link)
     return str(shortened_verify_url)
-
-async def verify_user(bot, userid, token):
-    user = await bot.get_users(userid)
-    if not await db.is_user_exist(user.id):
-        await db.add_user(user.id, user.first_name)
-        await bot.send_message(LOG_CHANNEL, script.LOG_TEXT_P.format(user.id, user.mention))
-    TOKENS[user.id] = {token: True}
-    tz = pytz.timezone('Asia/Kolkata')
-    today = date.today()
-    VERIFIED[user.id] = str(today)
-
-async def check_verification(bot, userid):
-    user = await bot.get_users(userid)
-    if not await db.is_user_exist(user.id):
-        await db.add_user(user.id, user.first_name)
-        await bot.send_message(LOG_CHANNEL, script.LOG_TEXT_P.format(user.id, user.mention))
-    tz = pytz.timezone('Asia/Kolkata')
-    today = date.today()
-    if user.id in VERIFIED.keys():
-        EXP = VERIFIED[user.id]
-        years, month, day = EXP.split('-')
-        comp = date(int(years), int(month), int(day))
-        if comp<today:
-            return False
-        else:
-            return True
-    else:
-        return False
 
 async def send_all(bot, userid, files, ident):
     for file in files:
@@ -621,3 +594,49 @@ async def send_all(bot, userid, files, ident):
                 ]
             )
         )
+
+async def get_verify_status(userid):
+    status = temp.VERIFY.get(userid)
+    if not status:
+        status = await db.get_verified(userid)
+        temp.VERIFY[userid] = status
+    return status
+    
+async def update_verify_status(userid, date, time):
+    status = await get_verify_status(userid)
+    status["date"] = date
+    status["time"] = time
+    temp.VERIFY[userid] = status
+    await db.update_verification(userid, status)
+
+async def verify_user(bot, userid, token):
+    user = await bot.get_users(int(userid))
+    if not await db.is_user_exist(user.id):
+        await db.add_user(user.id, user.first_name)
+        await bot.send_message(LOG_CHANNEL, script.LOG_TEXT_P.format(user.id, user.mention))
+    TOKENS[user.id] = {token: True}
+    tz = pytz.timezone('Asia/Kolkata')
+    date = datetime.date.today()
+    time = datetime.now()+timedelta(hours=12)
+    await update_verify_status(user.id, date, time)
+
+async def check_verification(bot, userid):
+    user = await bot.get_users(int(userid))
+    if not await db.is_user_exist(user.id):
+        await db.add_user(user.id, user.first_name)
+        await bot.send_message(LOG_CHANNEL, script.LOG_TEXT_P.format(user.id, user.mention))
+    tz = pytz.timezone('Asia/Kolkata')
+    today = datetime.date.today()
+    now = datetime.now(tz)
+    curr_time = now.strftime("%H:%M:%S")
+    status = await get_verify_status(user.id)
+    date = status["date"]
+    time = status["time"]
+    years, month, day = date.split('-')
+    comp_date = datetime.date(int(years), int(month), int(day))
+    hour, minute, second = time.split(":")
+    comp_time = datetime.time(int(hour), int(minute), int(second))
+    if comp_date<today or comp_time<curr_time:
+        return False
+    else:
+        return True
