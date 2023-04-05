@@ -616,10 +616,10 @@ async def verify_user(bot, userid, token):
         await bot.send_message(LOG_CHANNEL, script.LOG_TEXT_P.format(user.id, user.mention))
     TOKENS[user.id] = {token: True}
     tz = pytz.timezone('Asia/Kolkata')
-    date_var = date.today()
-    time_var = datetime.now()+timedelta(hours=12)
-    curr_time = time_var.strftime("%H:%M:%S")
-    await update_verify_status(user.id, date_var, curr_time)
+    date_var = datetime.today()+timedelta(hours=12)
+    temp_time = date_var.strftime("%H:%M:%S")
+    date_var, time_var = str(date_var).split(" ")
+    await update_verify_status(user.id, date_var, temp_time)
 
 async def check_verification(bot, userid):
     user = await bot.get_users(int(userid))
