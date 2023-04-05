@@ -11,7 +11,7 @@ import pytz
 import random 
 import re
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date, time
 import string
 from typing import List
 from database.users_chats_db import db
@@ -616,9 +616,9 @@ async def verify_user(bot, userid, token):
         await bot.send_message(LOG_CHANNEL, script.LOG_TEXT_P.format(user.id, user.mention))
     TOKENS[user.id] = {token: True}
     tz = pytz.timezone('Asia/Kolkata')
-    date = datetime.date.today()
+    date_var = date.today()
     time = datetime.now()+timedelta(hours=12)
-    await update_verify_status(user.id, date, time)
+    await update_verify_status(user.id, date_var, time)
 
 async def check_verification(bot, userid):
     user = await bot.get_users(int(userid))
@@ -626,16 +626,16 @@ async def check_verification(bot, userid):
         await db.add_user(user.id, user.first_name)
         await bot.send_message(LOG_CHANNEL, script.LOG_TEXT_P.format(user.id, user.mention))
     tz = pytz.timezone('Asia/Kolkata')
-    today = datetime.date.today()
+    today = date.today()
     now = datetime.now(tz)
     curr_time = now.strftime("%H:%M:%S")
     status = await get_verify_status(user.id)
-    date = status["date"]
-    time = status["time"]
-    years, month, day = date.split('-')
-    comp_date = datetime.date(int(years), int(month), int(day))
-    hour, minute, second = time.split(":")
-    comp_time = datetime.time(int(hour), int(minute), int(second))
+    date_var = status["date"]
+    time_var = status["time"]
+    years, month, day = date_var.split('-')
+    comp_date = date(int(years), int(month), int(day))
+    hour, minute, second = time_var.split(":")
+    comp_time = time(int(hour), int(minute), int(second))
     if comp_date<today or comp_time<curr_time:
         return False
     else:
