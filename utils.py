@@ -618,7 +618,8 @@ async def verify_user(bot, userid, token):
     tz = pytz.timezone('Asia/Kolkata')
     date_var = date.today()
     time_var = datetime.now()+timedelta(hours=12)
-    await update_verify_status(user.id, date_var, time_var)
+    curr_time = time_var.strftime("%H:%M:%S")
+    await update_verify_status(user.id, date_var, curr_time)
 
 async def check_verification(bot, userid):
     user = await bot.get_users(int(userid))
