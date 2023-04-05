@@ -607,7 +607,7 @@ async def update_verify_status(userid, date_temp, time_temp):
     status["date"] = date_temp
     status["time"] = time_temp
     temp.VERIFY[userid] = status
-    await db.update_verification(userid, status)
+    await db.update_verification(userid, date_temp, time_temp)
 
 async def verify_user(bot, userid, token):
     user = await bot.get_users(int(userid))
