@@ -242,17 +242,28 @@ async def start(client, message):
                 text="<b>Invalid link or Expired link !</b>",
                 protect_content=True
             )
-        if fileid == "send_all":
-            send_files = temp.SEND_ALL_TEMP.get(message.from_user.id)
-            is_over = await send_all(client, message.from_user.id, send_files, 'file')
-            if is_over == 'done':
-                return await message.reply_text(f"Hey {message.from_user.first_name}, All files on this page has been sent successfully to your PM !")
-            elif is_over == 'fsub':
-                return await message.reply_text("Hey, You are not joined in my back up channel. Check my PM to join and get files !")
-            else:
-                return await message.reply_text("Hey, You have not verified today. You have to verify to continue. Check my PM to verify and get files !")
         is_valid = await check_token(client, userid, token)
         if is_valid == True:
+            if fileid == "send_all":
+                btn = [[
+                    InlineKeyboardButton("Get File", callback_data=f"checksub#send_all")
+                ]]
+                await verify_user(client, userid, token)
+                await message.reply_text(
+                    text=f"<b>Hey {message.from_user.mention}, You are successfully verified !\nNow you have unlimited access for all movies till the next verification which is after 12 hours from now.</b>",
+                    protect_content=True,
+                    reply_markup=InlineKeyboardMarkup(btn)
+                )
+                send_files = temp.SEND_ALL_TEMP.get(message.from_user.id)
+                is_over = await send_all(client, message.from_user.id, send_files, 'file')
+                if is_over == 'done':
+                    return await message.reply_text(f"Hey {message.from_user.first_name}, All files on this page has been sent successfully to your PM !")
+                elif is_over == 'fsub':
+                    return await message.reply_text("Hey, You are not joined in my back up channel. Check my PM to join and get files !")
+                elif is_over == 'verify':
+                    return await message.reply_text("Hey, You have not verified today. You have to verify to continue. Check my PM to verify and get files !")
+                else:
+                    return await message.reply_text(f"Error: {is_over}")
             btn = [[
                 InlineKeyboardButton("Get File", url=f"https://telegram.me/{temp.U_NAME}?start=files_{fileid}")
             ]]

@@ -580,7 +580,8 @@ async def send_all(bot, userid, files, ident):
         else:
             pre = 'checksub' 
         btn = [[
-                InlineKeyboardButton("❆ Jᴏɪɴ Oᴜʀ Bᴀᴄᴋ-Uᴘ Cʜᴀɴɴᴇʟ ❆", url=invite_link.invite_link),
+                InlineKeyboardButton("❆ Jᴏɪɴ Oᴜʀ Bᴀᴄᴋ-Uᴘ Cʜᴀɴɴᴇʟ ❆", url=invite_link.invite_link)
+            ],[
                 InlineKeyboardButton("↻ Tʀʏ Aɢᴀɪɴ", callback_data=f"{pre}#send_all")
             ]]
         await bot.send_message(
@@ -617,22 +618,32 @@ async def send_all(bot, userid, files, ident):
                 f_caption = f_caption
         if f_caption is None:
             f_caption = f"{title}"
-        await bot.send_cached_media(
-            chat_id=userid,
-            file_id=file.file_id,
-            caption=f_caption,
-            protect_content=True if ident == "filep" else False,
-            reply_markup=InlineKeyboardMarkup(
-                [
+        try:
+            await bot.send_cached_media(
+                chat_id=userid,
+                file_id=file.file_id,
+                caption=f_caption,
+                protect_content=True if ident == "filep" else False,
+                reply_markup=InlineKeyboardMarkup(
                     [
-                    InlineKeyboardButton('Sᴜᴘᴘᴏʀᴛ Gʀᴏᴜᴘ', url=GRP_LNK),
-                    InlineKeyboardButton('Uᴘᴅᴀᴛᴇs Cʜᴀɴɴᴇʟ', url=CHNL_LNK)
-                ],[
-                    InlineKeyboardButton("Bᴏᴛ Oᴡɴᴇʀ", url="t.me/creatorbeatz")
+                        [
+                        InlineKeyboardButton('Sᴜᴘᴘᴏʀᴛ Gʀᴏᴜᴘ', url=GRP_LNK),
+                        InlineKeyboardButton('Uᴘᴅᴀᴛᴇs Cʜᴀɴɴᴇʟ', url=CHNL_LNK)
+                    ],[
+                        InlineKeyboardButton("Bᴏᴛ Oᴡɴᴇʀ", url="t.me/creatorbeatz")
+                        ]
                     ]
-                ]
+                )
             )
-        )
+        except UserIsBlocked:
+            logger.error(f"User: {userid} blocked the bot. Unblock the bot!")
+            return "User is blocked the bot ! Unblock to send files !"
+        except PeerIdInvalid:
+            logger.error("Error: Peer ID invalid !")
+            return "Peer ID invalid !"
+        except Exception as e:
+            logger.error(f"Error: {e}")
+            return f"Error: {e}"
     return 'done'
 
 async def get_verify_status(userid):

@@ -602,8 +602,10 @@ async def cb_handler(client: Client, query: CallbackQuery):
                 return await query.answer(f"Hey {query.from_user.first_name}, All files on this page has been sent successfully to your PM !", show_alert=True)
             elif is_over == 'fsub':
                 return await query.answer("Hey, You are not joined in my back up channel. Check my PM to join and get files !", show_alert=True)
-            else:
+            elif is_over == 'verify':
                 return await query.answer("Hey, You have not verified today. You have to verify to continue. Check my PM to verify and get files !", show_alert=True)
+            else:
+                return await query.answer(f"Error: {is_over}", show_alert=True)
         files_ = await get_file_details(file_id)
         if not files_:
             return await query.answer('Nᴏ sᴜᴄʜ ғɪʟᴇ ᴇxɪsᴛ.')
@@ -667,8 +669,10 @@ async def cb_handler(client: Client, query: CallbackQuery):
             return await query.answer(f"Hey {query.from_user.first_name}, All files on this page has been sent successfully to your PM !", show_alert=True)
         elif is_over == 'fsub':
             return await query.answer("Hey, You are not joined in my back up channel. Check my PM to join and get files !", show_alert=True)
-        else:
+        elif is_over == 'verify':
             return await query.answer("Hey, You have not verified today. You have to verify to continue. Check my PM to verify and get files !", show_alert=True)
+        else:
+            return await query.answer(f"Error: {is_over}", show_alert=True)
 
     elif query.data.startswith("killfilesdq"):
         ident, keyword = query.data.split("#")
