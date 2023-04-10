@@ -1,6 +1,6 @@
 import logging
-from pyrogram.errors import InputUserDeactivated, UserNotParticipant, FloodWait, UserIsBlocked, PeerIdInvalid
-from info import AUTH_CHANNEL, LONG_IMDB_DESCRIPTION, MAX_LIST_ELM, SHORTLINK_URL, SHORTLINK_API, LOG_CHANNEL, GRP_LNK, CHNL_LNK, CUSTOM_FILE_CAPTION
+from pyrogram.errors import InputUserDeactivated, UserNotParticipant, FloodWait, UserIsBlocked, PeerIdInvalid, ChatAdminRequired
+from info import AUTH_CHANNEL, LONG_IMDB_DESCRIPTION, MAX_LIST_ELM, SHORTLINK_URL, SHORTLINK_API, LOG_CHANNEL, GRP_LNK, CHNL_LNK, CUSTOM_FILE_CAPTION, VERIFY
 from imdb import Cinemagoer 
 import asyncio
 from pyrogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup
@@ -46,10 +46,15 @@ class temp(object):
     B_NAME = None
     SETTINGS = {}
     VERIFY = {}
+    SEND_ALL_TEMP = {}
+    KEYWORD = {}
 
-async def is_subscribed(bot, query):
+async def is_subscribed(bot, query=None, userid=None):
     try:
-        user = await bot.get_chat_member(AUTH_CHANNEL, query.from_user.id)
+        if userid == None and query != None:
+            user = await bot.get_chat_member(AUTH_CHANNEL, query.from_user.id)
+        else:
+            user = await bot.get_chat_member(AUTH_CHANNEL, int(userid))
     except UserNotParticipant:
         pass
     except Exception as e:
@@ -564,6 +569,40 @@ async def get_token(bot, userid, link, fileid):
     return str(shortened_verify_url)
 
 async def send_all(bot, userid, files, ident):
+    if AUTH_CHANNEL and not await is_subscribed(bot=bot, userid=userid):
+        try:
+            invite_link = await bot.create_chat_invite_link(int(AUTH_CHANNEL))
+        except ChatAdminRequired:
+            logger.error("Make sure Bot is admin in Forcesub channel")
+            return
+        if ident == 'filep' or 'checksubp':
+            pre = 'checksubp'
+        else:
+            pre = 'checksub' 
+        btn = [[
+                InlineKeyboardButton("❆ Jᴏɪɴ Oᴜʀ Bᴀᴄᴋ-Uᴘ Cʜᴀɴɴᴇʟ ❆", url=invite_link.invite_link),
+                InlineKeyboardButton("↻ Tʀʏ Aɢᴀɪɴ", callback_data=f"{pre}#send_all")
+            ]]
+        await bot.send_message(
+            chat_id=userid,
+            text="**You are not in our Back-up channel given below so you don't get the movie file...\n\nIf you want the movie file, click on the '🍿ᴊᴏɪɴ ᴏᴜʀ ʙᴀᴄᴋ-ᴜᴘ ᴄʜᴀɴɴᴇʟ🍿' button below and join our back-up channel, then click on the '🔄 Try Again' button below...\n\nThen you will get the movie files...**",
+            reply_markup=InlineKeyboardMarkup(btn),
+            parse_mode=enums.ParseMode.MARKDOWN
+            )
+        return 'fsub'
+    
+    if not await check_verification(bot, userid) and VERIFY == True:
+        btn = [[
+            InlineKeyboardButton("Verify", url=await get_token(bot, userid, f"https://telegram.me/{temp.U_NAME}?start=", 'send_all'))
+        ]]
+        await bot.send_message(
+            chat_id=userid,
+            text="<b>You are not verified !\nKindly verify to continue !</b>",
+            protect_content=True,
+            reply_markup=InlineKeyboardMarkup(btn)
+        )
+        return 'verify'
+    
     for file in files:
         f_caption = file.caption
         title = file.file_name
@@ -594,6 +633,7 @@ async def send_all(bot, userid, files, ident):
                 ]
             )
         )
+    return 'done'
 
 async def get_verify_status(userid):
     status = temp.VERIFY.get(userid)

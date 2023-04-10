@@ -9,7 +9,7 @@ from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from database.ia_filterdb import Media, get_file_details, unpack_new_file_id, get_bad_files
 from database.users_chats_db import db
 from info import CHANNELS, ADMINS, AUTH_CHANNEL, LOG_CHANNEL, PICS, BATCH_FILE_CAPTION, CUSTOM_FILE_CAPTION, PROTECT_CONTENT, CHNL_LNK, GRP_LNK, REQST_CHANNEL, SUPPORT_CHAT_ID, MAX_B_TN, VERIFY
-from utils import get_settings, get_size, is_subscribed, save_group_settings, temp, verify_user, check_token, check_verification, get_token
+from utils import get_settings, get_size, is_subscribed, save_group_settings, temp, verify_user, check_token, check_verification, get_token, send_all
 from database.connections_mdb import active_connection
 import re
 import json
@@ -242,6 +242,15 @@ async def start(client, message):
                 text="<b>Invalid link or Expired link !</b>",
                 protect_content=True
             )
+        if fileid == "send_all":
+            send_files = temp.SEND_ALL_TEMP.get(message.from_user.id)
+            is_over = await send_all(client, message.from_user.id, send_files, 'file')
+            if is_over == 'done':
+                return await message.reply_text(f"Hey {message.from_user.first_name}, All files on this page has been sent successfully to your PM !")
+            elif is_over == 'fsub':
+                return await message.reply_text("Hey, You are not joined in my back up channel. Check my PM to join and get files !")
+            else:
+                return await message.reply_text("Hey, You have not verified today. You have to verify to continue. Check my PM to verify and get files !")
         is_valid = await check_token(client, userid, token)
         if is_valid == True:
             btn = [[

@@ -12,11 +12,11 @@ import pyrogram
 from database.connections_mdb import active_connection, all_connections, delete_connection, if_active, make_active, \
     make_inactive
 from info import ADMINS, AUTH_CHANNEL, AUTH_USERS, SUPPORT_CHAT_ID, CUSTOM_FILE_CAPTION, MSG_ALRT, PICS, AUTH_GROUPS, P_TTI_SHOW_OFF, GRP_LNK, CHNL_LNK, NOR_IMG, LOG_CHANNEL, SPELL_IMG, MAX_B_TN, IMDB, \
-    SINGLE_BUTTON, SPELL_CHECK_REPLY, IMDB_TEMPLATE, NO_RESULTS_MSG
+    SINGLE_BUTTON, SPELL_CHECK_REPLY, IMDB_TEMPLATE, NO_RESULTS_MSG, VERIFY
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, InputMediaPhoto
 from pyrogram import Client, filters, enums
 from pyrogram.errors import FloodWait, UserIsBlocked, MessageNotModified, PeerIdInvalid
-from utils import get_size, is_subscribed, get_poster, search_gagala, temp, get_settings, save_group_settings, get_shortlink, send_all
+from utils import get_size, is_subscribed, get_poster, search_gagala, temp, get_settings, save_group_settings, get_shortlink, send_all, check_verification, get_token
 from database.users_chats_db import db
 from database.ia_filterdb import Media, get_file_details, get_search_results, get_bad_files
 from database.filters_mdb import (
@@ -92,6 +92,7 @@ async def next_page(bot, query):
     if not files:
         return
     settings = await get_settings(query.message.chat.id)
+    temp.SEND_ALL_TEMP[query.from_user.id] = files
     if 'is_shortlink' in settings.keys():
         ENABLE_SHORTLINK = settings['is_shortlink']
     else:
@@ -271,7 +272,7 @@ async def next_page(bot, query):
                     ],
                 )
     btn.insert(0, [
-        InlineKeyboardButton("Send All !", callback_data=f"send_fall#files#{key}#{offset}")
+        InlineKeyboardButton("Send All !", callback_data=f"send_fall#files#{offset}")
     ])
     btn.insert(0, [
         InlineKeyboardButton("⚡ Cʜᴇᴄᴋ Bᴏᴛ PM ⚡", url=f"https://t.me/{temp.U_NAME}")
@@ -594,6 +595,15 @@ async def cb_handler(client: Client, query: CallbackQuery):
             await query.answer("Jᴏɪɴ ᴏᴜʀ Bᴀᴄᴋ-ᴜᴘ ᴄʜᴀɴɴᴇʟ ᴍᴀʜɴ! 😒", show_alert=True)
             return
         ident, file_id = query.data.split("#")
+        if file_id == "send_all":
+            send_files = temp.SEND_ALL_TEMP.get(query.from_user.id)
+            is_over = await send_all(client, query.from_user.id, send_files, ident)
+            if is_over == 'done':
+                return await query.answer(f"Hey {query.from_user.first_name}, All files on this page has been sent successfully to your PM !", show_alert=True)
+            elif is_over == 'fsub':
+                return await query.answer("Hey, You are not joined in my back up channel. Check my PM to join and get files !", show_alert=True)
+            else:
+                return await query.answer("Hey, You have not verified today. You have to verify to continue. Check my PM to verify and get files !", show_alert=True)
         files_ = await get_file_details(file_id)
         if not files_:
             return await query.answer('Nᴏ sᴜᴄʜ ғɪʟᴇ ᴇxɪsᴛ.')
@@ -612,6 +622,19 @@ async def cb_handler(client: Client, query: CallbackQuery):
         if f_caption is None:
             f_caption = f"{title}"
         await query.answer()
+        if not await check_verification(client, query.from_user.id) and VERIFY == True:
+            btn = [[
+                InlineKeyboardButton("Verify", url=await get_token(client, query.from_user.id, f"https://telegram.me/{temp.U_NAME}?start=", file_id))
+            ]]
+            await client.send_message(
+                chat_id=query.from_user.id,
+                text="<b>You are not verified !\nKindly verify to continue !</b>",
+                protect_content=True if ident == 'checksubp' else False,
+                disable_web_page_preview=True,
+                parse_mode=enums.ParseMode.HTML,
+                reply_markup=InlineKeyboardMarkup(btn)
+            )
+            return
         await client.send_cached_media(
             chat_id=query.from_user.id,
             file_id=file_id,
@@ -632,14 +655,20 @@ async def cb_handler(client: Client, query: CallbackQuery):
         await query.answer()
 
     elif query.data.startswith("send_fall"):
-        temp_var, ident, key, offset = query.data.split("#")
-        search = BUTTONS.get(key)
+        temp_var, ident, offset = query.data.split("#")
+        search = temp.KEYWORD.get(query.from_user.id)
         if not search:
             await query.answer(script.OLD_ALRT_TXT.format(query.from_user.first_name),show_alert=True)
             return
         files, n_offset, total = await get_search_results(query.message.chat.id, search, offset=int(offset), filter=True)
-        await send_all(client, query.from_user.id, files, ident)
-        await query.answer(f"Hey {query.from_user.first_name}, All files on this page has been sent successfully to your PM !", show_alert=True)
+        temp.SEND_ALL_TEMP[query.from_user.id] = files
+        is_over = await send_all(client, query.from_user.id, files, ident)
+        if is_over == 'done':
+            return await query.answer(f"Hey {query.from_user.first_name}, All files on this page has been sent successfully to your PM !", show_alert=True)
+        elif is_over == 'fsub':
+            return await query.answer("Hey, You are not joined in my back up channel. Check my PM to join and get files !", show_alert=True)
+        else:
+            return await query.answer("Hey, You have not verified today. You have to verify to continue. Check my PM to verify and get files !", show_alert=True)
 
     elif query.data.startswith("killfilesdq"):
         ident, keyword = query.data.split("#")
@@ -1357,6 +1386,8 @@ async def auto_filter(client, msg, spoll=False):
         message = msg.message.reply_to_message  # msg will be callback query
         search, files, offset, total_results = spoll
     settings = await get_settings(message.chat.id)
+    temp.SEND_ALL_TEMP[message.from_user.id] = files
+    temp.KEYWORD[message.from_user.id] = search
     if 'is_shortlink' in settings.keys():
         ENABLE_SHORTLINK = settings['is_shortlink']
     else:
@@ -1452,7 +1483,7 @@ async def auto_filter(client, msg, spoll=False):
             )
 
     btn.insert(0, [
-        InlineKeyboardButton("Send All !", callback_data=f"send_fall#{pre}#{message.chat.id}-{message.id}#{0}")
+        InlineKeyboardButton("Send All !", callback_data=f"send_fall#{pre}#{0}")
     ])
 
     btn.insert(0, [
@@ -1671,9 +1702,9 @@ async def advantage_spell_chok(client, msg):
             await asyncio.sleep(600)
             await spell_check_del.delete()
     except KeyError:
-            grpid = await active_connection(str(message.from_user.id))
+            grpid = await active_connection(str(msg.from_user.id))
             await save_group_settings(grpid, 'auto_delete', True)
-            settings = await get_settings(message.chat.id)
+            settings = await get_settings(msg.chat.id)
             if settings['auto_delete']:
                 await asyncio.sleep(600)
                 await spell_check_del.delete()
