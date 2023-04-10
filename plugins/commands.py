@@ -254,16 +254,7 @@ async def start(client, message):
                     protect_content=True,
                     reply_markup=InlineKeyboardMarkup(btn)
                 )
-                send_files = temp.SEND_ALL_TEMP.get(message.from_user.id)
-                is_over = await send_all(client, message.from_user.id, send_files, 'file')
-                if is_over == 'done':
-                    return await message.reply_text(f"Hey {message.from_user.first_name}, All files on this page has been sent successfully to your PM !")
-                elif is_over == 'fsub':
-                    return await message.reply_text("Hey, You are not joined in my back up channel. Check my PM to join and get files !")
-                elif is_over == 'verify':
-                    return await message.reply_text("Hey, You have not verified today. You have to verify to continue. Check my PM to verify and get files !")
-                else:
-                    return await message.reply_text(f"Error: {is_over}")
+                return
             btn = [[
                 InlineKeyboardButton("Get File", url=f"https://telegram.me/{temp.U_NAME}?start=files_{fileid}")
             ]]
